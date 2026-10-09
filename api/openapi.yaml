@@ -1,0 +1,958 @@
+openapi: 3.0.3
+info:
+  title: 株・指数の下落通知サービス API
+  version: 1.0.0
+  description: ReactとGoを同一オリジンで提供する単一管理者向けAPI。価格・IDは文字列、日時はUTC。本文書のサンプル価格は仮の値。
+servers:
+- url: /api/v1
+  description: 同一オリジンのAPI
+tags:
+- name: 認証
+- name: 監視対象
+- name: 通知設定
+security:
+- CookieAuth: []
+paths:
+  /auth/login:
+    post:
+      operationId: login
+      tags:
+      - 認証
+      summary: 管理者ログイン
+      responses:
+        '200':
+          description: 認証成功・24時間セッション発行
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            Set-Cookie:
+              schema:
+                type: string
+              description: __Host-stock_sessionと__Host-stock_csrfを個別のSet-Cookieヘッダーで設定。Secure・HttpOnly・SameSite=Strict・Path=/・Domainなし・Max-Age=86400。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              example:
+                admin_id: owner
+                expires_at: '2026-10-08T22:00:00Z'
+                csrf_token: sample-csrf-token-for-documentation-only
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/InvalidCredentials'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      parameters:
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uri
+        description: PUBLIC_ORIGINと完全一致。欠落も403。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+            example:
+              admin_id: owner
+              password: example-password
+      security: []
+  /auth/session:
+    get:
+      operationId: getSession
+      tags:
+      - 認証
+      summary: セッション確認とCSRFトークン取得
+      responses:
+        '200':
+          description: セッション有効
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              example:
+                admin_id: owner
+                expires_at: '2026-10-08T22:00:00Z'
+                csrf_token: sample-csrf-token-for-documentation-only
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/logout:
+    post:
+      operationId: logout
+      tags:
+      - 認証
+      summary: ログアウト
+      responses:
+        '204':
+          description: DBセッションを失効し、両CookieをMax-Age=0で削除
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            Set-Cookie:
+              schema:
+                type: string
+              description: 両認証Cookieを削除。その他属性は発行時と同じ。
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      parameters:
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uri
+        description: PUBLIC_ORIGINと完全一致。欠落も403。
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 32
+        description: ログインまたはセッションAPIで取得したCSRFトークン。
+  /assets:
+    get:
+      operationId: listAssets
+      tags:
+      - 監視対象
+      summary: 監視対象を検索・ソート
+      responses:
+        '200':
+          description: 保存済みの全検索結果
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetList'
+              example:
+                items:
+                - id: '1'
+                  code: ^GSPC
+                  name: S&P 500
+                  highest_value: '6000'
+                  latest_value: '5100'
+                  decline_rate: '15.00'
+                  latest_fetched_at: '2026-10-07T22:00:00Z'
+                  enabled: true
+                  last_notified_threshold: 15
+                  last_checked_at: '2026-10-07T22:00:00Z'
+                  last_error_code: null
+                  created_at: '2026-10-01T00:00:00Z'
+                  updated_at: '2026-10-07T22:00:00Z'
+                total: 1
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      description: 価格の再取得は行わない。ページングなし。未知のクエリパラメータは400。
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+          maxLength: 200
+          default: ''
+        description: コード・名称の部分一致。前後空白除去、大文字小文字を区別しない。%と_は文字として検索。
+      - name: sort
+        in: query
+        schema:
+          type: string
+          enum:
+          - created_at
+          - code
+          - name
+          - highest_value
+          - latest_value
+          - decline_rate
+          - latest_fetched_at
+          - enabled
+          - last_notified_threshold
+          default: created_at
+        description: 数値は数値順、下落率は丸め前。同値はID昇順、nullは末尾。
+      - name: order
+        in: query
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+          default: asc
+    post:
+      operationId: createAsset
+      tags:
+      - 監視対象
+      summary: コードから監視対象を追加
+      responses:
+        '201':
+          description: 価格取得後に登録成功
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            Location:
+              schema:
+                type: string
+              description: 作成した資源の識別URI。単体GETは設けず一覧で確認。
+              example: /api/v1/assets/1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+              example:
+                id: '1'
+                code: ^GSPC
+                name: S&P 500
+                highest_value: '6000'
+                latest_value: '6000'
+                decline_rate: '0.00'
+                latest_fetched_at: '2026-10-07T22:00:00Z'
+                enabled: true
+                last_notified_threshold: null
+                last_checked_at: '2026-10-07T22:00:00Z'
+                last_error_code: null
+                created_at: '2026-10-01T00:00:00Z'
+                updated_at: '2026-10-07T22:00:00Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '409':
+          $ref: '#/components/responses/AssetAlreadyExists'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/SymbolUnavailable'
+        '502':
+          $ref: '#/components/responses/PriceProviderError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '504':
+          $ref: '#/components/responses/PriceProviderTimeout'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      description: 初期最高値=取得価格、未通知、監視中。LINE送信なし。
+      parameters:
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uri
+        description: PUBLIC_ORIGINと完全一致。欠落も403。
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 32
+        description: ログインまたはセッションAPIで取得したCSRFトークン。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAsset'
+            example:
+              code: ^GSPC
+  /assets/{id}:
+    patch:
+      operationId: updateAsset
+      tags:
+      - 監視対象
+      summary: 監視を停止・再開
+      responses:
+        '200':
+          description: 監視状態を変更
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+              example:
+                id: '1'
+                code: ^GSPC
+                name: S&P 500
+                highest_value: '6000'
+                latest_value: '5100'
+                decline_rate: '15.00'
+                latest_fetched_at: '2026-10-07T22:00:00Z'
+                enabled: false
+                last_notified_threshold: 15
+                last_checked_at: '2026-10-07T22:00:00Z'
+                last_error_code: null
+                created_at: '2026-10-01T00:00:00Z'
+                updated_at: '2026-10-07T22:00:00Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '404':
+          $ref: '#/components/responses/AssetNotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '503':
+          $ref: '#/components/responses/ResourceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      description: enabledだけ変更可。同じ状態でも成功。再開直後の価格取得・通知なし。
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/AssetId'
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uri
+        description: PUBLIC_ORIGINと完全一致。欠落も403。
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 32
+        description: ログインまたはセッションAPIで取得したCSRFトークン。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAsset'
+            example:
+              enabled: false
+    delete:
+      operationId: deleteAsset
+      tags:
+      - 監視対象
+      summary: 監視対象を削除
+      responses:
+        '204':
+          description: 物理削除完了
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '404':
+          $ref: '#/components/responses/AssetNotFound'
+        '503':
+          $ref: '#/components/responses/ResourceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      description: 再登録は新しいID・初期最高値・未通知状態で開始。
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/AssetId'
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uri
+        description: PUBLIC_ORIGINと完全一致。欠落も403。
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 32
+        description: ログインまたはセッションAPIで取得したCSRFトークン。
+  /settings/notifications:
+    get:
+      operationId: getNotificationSettings
+      tags:
+      - 通知設定
+      summary: 全銘柄共通の通知率を取得
+      responses:
+        '200':
+          description: 共通通知設定
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSettings'
+              example:
+                thresholds:
+                - 10
+                - 15
+                - 20
+                - 25
+                - 30
+                updated_at: '2026-10-08T00:00:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      operationId: updateNotificationSettings
+      tags:
+      - 通知設定
+      summary: 共通通知率を置換
+      responses:
+        '200':
+          description: 昇順で保存した共通設定
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSettings'
+              example:
+                thresholds:
+                - 10
+                - 20
+                - 30
+                updated_at: '2026-10-08T00:00:00Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      description: 通知済み状態は保持。設定変更時に通知せず、次回の監視実行から適用。
+      parameters:
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uri
+        description: PUBLIC_ORIGINと完全一致。欠落も403。
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 32
+        description: ログインまたはセッションAPIで取得したCSRFトークン。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNotificationSettings'
+            example:
+              thresholds:
+              - 30
+              - 10
+              - 20
+components:
+  securitySchemes:
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: __Host-stock_session
+      description: ログインAPIで発行。変更系はさらにOriginとX-CSRF-Tokenを要求する。
+  schemas:
+    AssetId:
+      type: string
+      pattern: ^[1-9][0-9]{0,18}$
+      description: 1〜9223372036854775807の十進整数文字列
+      example: '1'
+    Asset:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - code
+      - name
+      - highest_value
+      - latest_value
+      - decline_rate
+      - latest_fetched_at
+      - enabled
+      - last_notified_threshold
+      - last_checked_at
+      - last_error_code
+      - created_at
+      - updated_at
+      properties:
+        id:
+          $ref: '#/components/schemas/AssetId'
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        highest_value:
+          type: string
+          pattern: ^[0-9]+(?:\.[0-9]+)?$
+          description: 有限かつ正の十進数。指数表記なし。精度を固定しない。
+          example: '6000'
+        latest_value:
+          type: string
+          pattern: ^[0-9]+(?:\.[0-9]+)?$
+          description: 有限かつ正の十進数。指数表記なし。精度を固定しない。
+          example: '6000'
+        decline_rate:
+          type: string
+          pattern: ^(?:[0-9]|[1-9][0-9]|100)\.[0-9]{2}$
+          description: 小数2桁に四捨五入した下落率。閾値判定・ソートには丸め前の値を使う。
+          example: '15.00'
+        latest_fetched_at:
+          type: string
+          format: date-time
+          description: UTCのRFC 3339日時
+        enabled:
+          type: boolean
+        last_notified_threshold:
+          type: integer
+          minimum: 1
+          maximum: 99
+          nullable: true
+        last_checked_at:
+          type: string
+          format: date-time
+          description: UTCのRFC 3339日時
+        last_error_code:
+          type: string
+          nullable: true
+          enum:
+          - PRICE_FETCH_FAILED
+          - NOTIFICATION_FAILED
+          - null
+        created_at:
+          type: string
+          format: date-time
+          description: UTCのRFC 3339日時
+        updated_at:
+          type: string
+          format: date-time
+          description: UTCのRFC 3339日時
+      example:
+        id: '1'
+        code: ^GSPC
+        name: S&P 500
+        highest_value: '6000'
+        latest_value: '5100'
+        decline_rate: '15.00'
+        latest_fetched_at: '2026-10-07T22:00:00Z'
+        enabled: true
+        last_notified_threshold: 15
+        last_checked_at: '2026-10-07T22:00:00Z'
+        last_error_code: null
+        created_at: '2026-10-01T00:00:00Z'
+        updated_at: '2026-10-07T22:00:00Z'
+    AssetList:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        total:
+          type: integer
+          minimum: 0
+          description: 検索後のitemsの長さ。ページングなし。
+    CreateAsset:
+      type: object
+      additionalProperties: false
+      required:
+      - code
+      properties:
+        code:
+          type: string
+          minLength: 1
+          description: 前後空白除去・ASCII英字大文字化後に1〜64文字、内部の空白・制御文字不可。登録時に価格取得。
+          example: ^GSPC
+    UpdateAsset:
+      type: object
+      additionalProperties: false
+      required:
+      - enabled
+      properties:
+        enabled:
+          type: boolean
+          description: 停止・再開のみ。最高値と通知済み率は保持する。
+    UpdateNotificationSettings:
+      type: object
+      additionalProperties: false
+      required:
+      - thresholds
+      properties:
+        thresholds:
+          type: array
+          minItems: 1
+          maxItems: 99
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 1
+            maximum: 99
+          description: 全銘柄共通。入力順は任意、保存・返却時は昇順。
+          example:
+          - 10
+          - 15
+          - 20
+          - 25
+          - 30
+    NotificationSettings:
+      type: object
+      additionalProperties: false
+      required:
+      - thresholds
+      - updated_at
+      properties:
+        thresholds:
+          type: array
+          minItems: 1
+          maxItems: 99
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 1
+            maximum: 99
+          description: 昇順の共通閾値
+        updated_at:
+          type: string
+          format: date-time
+          description: UTCのRFC 3339日時
+    Login:
+      type: object
+      additionalProperties: false
+      required:
+      - admin_id
+      - password
+      properties:
+        admin_id:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: owner
+        password:
+          type: string
+          format: password
+          minLength: 1
+          maxLength: 72
+          description: UTF-8で72バイト以下。空白を除去しない。
+          example: example-password
+    Session:
+      type: object
+      additionalProperties: false
+      required:
+      - admin_id
+      - expires_at
+      - csrf_token
+      properties:
+        admin_id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        expires_at:
+          type: string
+          format: date-time
+          description: UTCのRFC 3339日時
+        csrf_token:
+          type: string
+          minLength: 32
+          description: 変更系APIのX-CSRF-Tokenに設定。Cookieに紐付く値。メモリ保持。
+    Error:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          - fields
+          properties:
+            code:
+              type: string
+              enum:
+              - VALIDATION_ERROR
+              - INVALID_CREDENTIALS
+              - UNAUTHENTICATED
+              - CSRF_FAILED
+              - ASSET_NOT_FOUND
+              - ASSET_ALREADY_EXISTS
+              - UNSUPPORTED_MEDIA_TYPE
+              - SYMBOL_UNAVAILABLE
+              - TOO_MANY_ATTEMPTS
+              - PRICE_PROVIDER_ERROR
+              - RESOURCE_BUSY
+              - SERVICE_UNAVAILABLE
+              - PRICE_PROVIDER_TIMEOUT
+              - INTERNAL_ERROR
+            message:
+              type: string
+              description: 秘密情報を含まない日本語の説明
+            fields:
+              type: object
+              additionalProperties:
+                type: string
+              description: 項目別エラー。なければ空オブジェクト。
+  responses:
+    ValidationError:
+      description: 'VALIDATION_ERROR: 入力内容を確認してください。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: 入力内容を確認してください。
+              fields: {}
+    InvalidCredentials:
+      description: 'INVALID_CREDENTIALS: IDまたはパスワードが違います。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INVALID_CREDENTIALS
+              message: IDまたはパスワードが違います。
+              fields: {}
+    CsrfFailed:
+      description: 'CSRF_FAILED: 要求元または認証トークンを確認できませんでした。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: CSRF_FAILED
+              message: 要求元または認証トークンを確認できませんでした。
+              fields: {}
+    UnsupportedMediaType:
+      description: 'UNSUPPORTED_MEDIA_TYPE: JSON形式で送信してください。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNSUPPORTED_MEDIA_TYPE
+              message: JSON形式で送信してください。
+              fields: {}
+    TooManyAttempts:
+      description: 'TOO_MANY_ATTEMPTS: 時間をおいて再試行してください。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+          description: 再試行までの秒数
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: TOO_MANY_ATTEMPTS
+              message: 時間をおいて再試行してください。
+              fields: {}
+    ServiceUnavailable:
+      description: 'SERVICE_UNAVAILABLE: 処理を完了できませんでした。再取得して確認してください。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: SERVICE_UNAVAILABLE
+              message: 処理を完了できませんでした。再取得して確認してください。
+              fields: {}
+    InternalError:
+      description: 'INTERNAL_ERROR: 処理を完了できませんでした。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: 処理を完了できませんでした。
+              fields: {}
+    Unauthenticated:
+      description: 'UNAUTHENTICATED: ログインしてください。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHENTICATED
+              message: ログインしてください。
+              fields: {}
+    AssetAlreadyExists:
+      description: 'ASSET_ALREADY_EXISTS: この銘柄は登録済みです。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: ASSET_ALREADY_EXISTS
+              message: この銘柄は登録済みです。
+              fields: {}
+    SymbolUnavailable:
+      description: 'SYMBOL_UNAVAILABLE: このコードの価格を取得できません。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: SYMBOL_UNAVAILABLE
+              message: このコードの価格を取得できません。
+              fields: {}
+    PriceProviderError:
+      description: 'PRICE_PROVIDER_ERROR: 価格提供サービスから有効な価格を取得できません。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: PRICE_PROVIDER_ERROR
+              message: 価格提供サービスから有効な価格を取得できません。
+              fields: {}
+    PriceProviderTimeout:
+      description: 'PRICE_PROVIDER_TIMEOUT: 価格取得がタイムアウトしました。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: PRICE_PROVIDER_TIMEOUT
+              message: 価格取得がタイムアウトしました。
+              fields: {}
+    AssetNotFound:
+      description: 'ASSET_NOT_FOUND: 監視対象が見つかりません。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: ASSET_NOT_FOUND
+              message: 監視対象が見つかりません。
+              fields: {}
+    ResourceUnavailable:
+      description: SERVICE_UNAVAILABLE または RESOURCE_BUSY（行ロック待機超過）。
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: SERVICE_UNAVAILABLE
+              message: 処理を完了できませんでした。再取得して確認してください。
+              fields: {}
+  headers:
+    NoStore:
+      description: キャッシュしない。
+      schema:
+        type: string
+        example: no-store
