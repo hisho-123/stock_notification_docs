@@ -83,7 +83,13 @@ Cookie属性・有効期限は[認証仕様](../design/security-operations.md)�
 }
 ```
 
-AssetのIDはDBのIDに対応。`latest_fetched_at`は最後の有効価格取得完了時刻、`last_checked_at`は最後の取得試行完了時刻。価格取得失敗では後者のみ進む。銘柄の`last_error_code`はnull / PRICE_FETCH_FAILED / NOTIFICATION_FAILEDのいずれか。一覧GET自体はその銘柄にエラーがあっても200で返す。
+AssetのIDはDBのIDに対応。`latest_fetched_at`は最後に保存した価格の取得完了時刻、`last_checked_at`は最後の取得試行完了時刻。日次処理では価格取得失敗・古いデータ検知のどちらも後者のみ進み、保存済み価格・最高値・通知済み率を保持する。警告付き新規登録では古い価格でも両日時を取得完了時刻にする。どちらもFMPのtimestampそのものではない。
+
+`last_error_code`はnull / `PRICE_FETCH_FAILED` / `NOTIFICATION_FAILED` / `PRICE_DATA_STALE`のいずれか。`PRICE_DATA_STALE`は240時間以上前のデータによる警告付き停止登録、または停滞通知成功による自動停止を示す。一覧には「価格データが10日以上前」と表示する。停滞通知失敗時は監視中・`NOTIFICATION_FAILED`で翌日再判定する。一覧GET自体はその銘柄にエラーがあっても200で返す。
+
+登録ではFMPの価格とUNIX秒の整数timestampを検証する。timestampの欠落・不正は`502 PRICE_PROVIDER_ERROR`。取得完了時刻との差が240時間以上でも登録は成功し、取得価格を初期最高値・最終取得値、通知済み率をnull、`enabled=false`、`last_error_code=PRICE_DATA_STALE`として201を返す。10日未満なら監視中・エラーなし。どちらもLINE送信なし。判定の詳細は[通知・日次処理仕様](../design/monitoring.md)を参照する。
+
+PATCHによる再開ではエラーを解消せず、即時取得・通知もしない。監視中の停止・再開・削除は運用で避け、監視処理との競合を排他制御しない。
 
 登録成功時は`Location: /api/v1/assets/{id}`を返す（資源の識別用。単体GETは設けず一覧で確認する）。削除成功は204でボディなし。
 
@@ -125,8 +131,7 @@ AssetのIDはDBのIDに対応。`latest_fetched_at`は最後の有効価格取�
 | 415 | UNSUPPORTED_MEDIA_TYPE | JSON以外のボディ |
 | 422 | SYMBOL_UNAVAILABLE | 外部サービスに一致する銘柄価格がない |
 | 429 | TOO_MANY_ATTEMPTS | ログイン試行制限、Retry-Afterを返す |
-| 502 | PRICE_PROVIDER_ERROR | 外部サービスエラー、不正価格・レスポンス、契約による拒否 |
-| 503 | RESOURCE_BUSY | 行ロック待機超過。再取得・再試行を案内 |
+| 502 | PRICE_PROVIDER_ERROR | 外部サービスエラー、不正価格・timestamp・レスポンス、契約による拒否 |
 | 503 | SERVICE_UNAVAILABLE | DB利用不可、共通設定欠落など |
 | 504 | PRICE_PROVIDER_TIMEOUT | 価格取得が30秒以内に完了しない |
 | 500 | INTERNAL_ERROR | その他の予期しないサーバーエラー |

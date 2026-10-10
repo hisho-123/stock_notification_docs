@@ -227,20 +227,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Asset'
-              example:
-                id: '1'
-                code: ^GSPC
-                name: S&P 500
-                highest_value: '6000'
-                latest_value: '6000'
-                decline_rate: '0.00'
-                latest_fetched_at: '2026-10-07T22:00:00Z'
-                enabled: true
-                last_notified_threshold: null
-                last_checked_at: '2026-10-07T22:00:00Z'
-                last_error_code: null
-                created_at: '2026-10-01T00:00:00Z'
-                updated_at: '2026-10-07T22:00:00Z'
+              examples:
+                fresh:
+                  summary: 10日未満の価格で監視中として登録
+                  value:
+                    id: '1'
+                    code: ^GSPC
+                    name: S&P 500
+                    highest_value: '6000'
+                    latest_value: '6000'
+                    decline_rate: '0.00'
+                    latest_fetched_at: '2026-10-07T22:00:00Z'
+                    enabled: true
+                    last_notified_threshold: null
+                    last_checked_at: '2026-10-07T22:00:00Z'
+                    last_error_code: null
+                    created_at: '2026-10-07T22:00:00Z'
+                    updated_at: '2026-10-07T22:00:00Z'
+                stale:
+                  summary: 10日以上前の価格で警告付き停止登録
+                  value:
+                    id: '1'
+                    code: ^GSPC
+                    name: S&P 500
+                    highest_value: '6000'
+                    latest_value: '6000'
+                    decline_rate: '0.00'
+                    latest_fetched_at: '2026-10-07T22:00:00Z'
+                    enabled: false
+                    last_notified_threshold: null
+                    last_checked_at: '2026-10-07T22:00:00Z'
+                    last_error_code: PRICE_DATA_STALE
+                    created_at: '2026-10-07T22:00:00Z'
+                    updated_at: '2026-10-07T22:00:00Z'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -261,7 +280,7 @@ paths:
           $ref: '#/components/responses/PriceProviderTimeout'
         '500':
           $ref: '#/components/responses/InternalError'
-      description: 初期最高値=取得価格、未通知、監視中。LINE送信なし。
+      description: 初期最高値=最終取得値=取得価格、未通知。FMPの整数UNIX秒timestampが取得完了時刻より240時間以上前なら停止中・PRICE_DATA_STALEで201、10日未満なら監視中・エラーなし。timestamp欠落・不正は502。登録時のLINE送信なし。
       parameters:
       - name: Origin
         in: header
@@ -326,10 +345,10 @@ paths:
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
         '503':
-          $ref: '#/components/responses/ResourceUnavailable'
+          $ref: '#/components/responses/ServiceUnavailable'
         '500':
           $ref: '#/components/responses/InternalError'
-      description: enabledだけ変更可。同じ状態でも成功。再開直後の価格取得・通知なし。
+      description: enabledだけ変更可。同じ状態でも成功。再開直後の価格取得・通知なし、エラーは保持。監視中の操作は運用で避け、競合時の整合性は保証しない。
       parameters:
       - name: id
         in: path
@@ -378,7 +397,7 @@ paths:
         '404':
           $ref: '#/components/responses/AssetNotFound'
         '503':
-          $ref: '#/components/responses/ResourceUnavailable'
+          $ref: '#/components/responses/ServiceUnavailable'
         '500':
           $ref: '#/components/responses/InternalError'
       description: 再登録は新しいID・初期最高値・未通知状態で開始。
@@ -551,9 +570,10 @@ components:
         latest_fetched_at:
           type: string
           format: date-time
-          description: UTCのRFC 3339日時
+          description: 保存対象価格の取得完了時刻（UTC）。日次処理は鮮度確認通過時だけ更新。警告付き登録では古い価格でも記録。FMPのtimestampではない。
         enabled:
           type: boolean
+          description: falseは日次処理対象外。古い価格での登録と停滞通知成功時はfalse。停滞通知失敗時はtrueを維持。
         last_notified_threshold:
           type: integer
           minimum: 1
@@ -562,13 +582,15 @@ components:
         last_checked_at:
           type: string
           format: date-time
-          description: UTCのRFC 3339日時
+          description: 最後の価格取得試行完了時刻（UTC）。取得失敗・古いデータ検知でも更新。
         last_error_code:
           type: string
+          description: PRICE_DATA_STALEは10日以上前の価格による停止登録・自動停止。NOTIFICATION_FAILEDは下落または停滞通知の失敗。手動再開では保持する。
           nullable: true
           enum:
           - PRICE_FETCH_FAILED
           - NOTIFICATION_FAILED
+          - PRICE_DATA_STALE
           - null
         created_at:
           type: string
@@ -736,7 +758,6 @@ components:
               - SYMBOL_UNAVAILABLE
               - TOO_MANY_ATTEMPTS
               - PRICE_PROVIDER_ERROR
-              - RESOURCE_BUSY
               - SERVICE_UNAVAILABLE
               - PRICE_PROVIDER_TIMEOUT
               - INTERNAL_ERROR
@@ -935,20 +956,6 @@ components:
             error:
               code: ASSET_NOT_FOUND
               message: 監視対象が見つかりません。
-              fields: {}
-    ResourceUnavailable:
-      description: SERVICE_UNAVAILABLE または RESOURCE_BUSY（行ロック待機超過）。
-      headers:
-        Cache-Control:
-          $ref: '#/components/headers/NoStore'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: SERVICE_UNAVAILABLE
-              message: 処理を完了できませんでした。再取得して確認してください。
               fields: {}
   headers:
     NoStore:

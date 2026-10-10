@@ -43,8 +43,9 @@
   }
 
   function assetsPage() {
-    let items=clone(window.stockSample.assets), query='', sort='created_at', order='asc', nextId=6, pending=null, deleteId=null, opener=null;
+    let items=clone(window.stockSample.assets), query='', sort='created_at', order='asc', nextId=7, pending=null, deleteId=null, opener=null;
     const region=$('table-region'), body=$('asset-rows'), dialog=$('delete-dialog');
+    const errorLabels={PRICE_FETCH_FAILED:'価格取得に失敗',NOTIFICATION_FAILED:'LINE通知に失敗',PRICE_DATA_STALE:'価格データが10日以上前'};
     function notice(text){show('notice',text);}
     function sorted() {
       const q=query.toLocaleLowerCase('ja');
@@ -77,7 +78,7 @@
       for(const asset of rows) {
         const row=document.createElement('tr');row.dataset.id=asset.id;
         const info=cell(row,null);const code=document.createElement('div');code.className='asset-code';code.textContent=asset.code;const name=document.createElement('div');name.className='asset-name';name.textContent=asset.name;info.append(code,name);
-        if(asset.last_error_code){const error=document.createElement('div');error.className='row-error';error.textContent=(asset.last_error_code==='PRICE_FETCH_FAILED'?'価格取得に失敗':'LINE通知に失敗')+' · 確認 '+date(asset.last_checked_at)+' JST';info.append(error);}
+        if(asset.last_error_code){const error=document.createElement('div');error.className='row-error';error.textContent=errorLabels[asset.last_error_code]+' · 確認 '+date(asset.last_checked_at)+' JST';info.append(error);}
         cell(row,price(asset.highest_value),'num price');cell(row,price(asset.latest_value),'num price');cell(row,asset.decline_rate+'%','num loss');
         const stamp=cell(row,null,'date');stamp.append(document.createTextNode(date(asset.latest_fetched_at)),document.createElement('br'),document.createTextNode('JST'));
         const statusCell=cell(row,null);const badge=document.createElement('span');badge.className='badge '+(asset.enabled?'active':'paused');badge.textContent=asset.enabled?'監視中':'停止中';statusCell.append(badge);
@@ -92,7 +93,7 @@
       }
       for(const th of document.querySelectorAll('th[data-sort]'))th.setAttribute('aria-sort',th.dataset.sort===sort?(order==='asc'?'ascending':'descending'):'none');
     }
-    state.addEventListener('change',()=>{items=clone(window.stockSample.assets);query='';$('search-input').value='';pending=null;show('add-error','');notice('');if(state.value==='empty')items=[];if(state.value==='no-results'){$('search-input').value=query='存在しない銘柄';}render();});
+    state.addEventListener('change',()=>{items=clone(window.stockSample.assets);query='';$('search-input').value='';pending=null;$('preview-stale-registration').checked=false;show('add-error','');notice('');if(state.value==='empty')items=[];if(state.value==='no-results'){$('search-input').value=query='存在しない銘柄';}render();});
     $('add-form').addEventListener('submit',event=>{
       event.preventDefault();if($('add-button').disabled)return;
       const code=$('code-input').value.trim().replace(/[a-z]/g,s=>s.toUpperCase());
@@ -100,7 +101,7 @@
       else if(items.some(a=>a.code===code))error='この銘柄は登録済みです。';
       else if(!Object.hasOwn(window.stockSample.quotes,code))error='この画面イメージのサンプルにないコードです。TSLA、^DJI、^N225をお試しください。';
       $('code-input').setAttribute('aria-invalid',String(!!error));show('add-error',error);if(error){$('code-input').focus();return;}
-      state.value='normal';pending='add';render();setTimeout(()=>{const quote=window.stockSample.quotes[code],now=new Date().toISOString();items.push({id:String(nextId++),code,name:quote.name,highest_value:quote.price,latest_value:quote.price,decline_rate:'0.00',latest_fetched_at:now,enabled:true,last_notified_threshold:null,last_checked_at:now,last_error_code:null,created_at:now,updated_at:now});$('code-input').value='';pending=null;render();notice(`${code}を追加しました。登録時の価格から監視を開始します。`);$('code-input').focus();},400);
+      state.value='normal';pending='add';render();setTimeout(()=>{const quote=window.stockSample.quotes[code],now=new Date().toISOString(),stale=$('preview-stale-registration').checked;items.push({id:String(nextId++),code,name:quote.name,highest_value:quote.price,latest_value:quote.price,decline_rate:'0.00',latest_fetched_at:now,enabled:!stale,last_notified_threshold:null,last_checked_at:now,last_error_code:stale?'PRICE_DATA_STALE':null,created_at:now,updated_at:now});$('code-input').value='';pending=null;render();notice(stale?`${code}を追加しました。価格データが10日以上前のため、停止状態で登録しました。`:`${code}を追加しました。登録時の価格から監視を開始します。`);$('code-input').focus();},400);
     });
     $('search-form').addEventListener('submit',event=>{event.preventDefault();if(event.isComposing||event.keyCode===229)return;query=$('search-input').value.trim();state.value='normal';render();});
     $('search-input').addEventListener('keydown',event=>{if(event.key==='Enter'&&event.isComposing)event.preventDefault();});

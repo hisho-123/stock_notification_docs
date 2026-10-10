@@ -40,15 +40,17 @@ erDiagram
 | name | VARCHAR(200) | 不可 | 1〜200文字、空白のみ不可。外部名称またはコード |
 | highest_value | NUMERIC | 不可 | 有限かつ正の監視最高値 |
 | latest_value | NUMERIC | 不可 | 有限かつ正の最終取得値、`latest_value <= highest_value` |
-| latest_fetched_at | TIMESTAMPTZ | 不可 | 有効価格の取得完了日時 |
-| enabled | BOOLEAN | 不可 | 既定true。falseの対象は日次処理対象外 |
+| latest_fetched_at | TIMESTAMPTZ | 不可 | 保存対象価格の取得完了日時。日次処理は鮮度確認通過時だけ更新。警告付き新規登録では古い価格でも記録 |
+| enabled | BOOLEAN | 不可 | 既定true。falseの対象は日次処理対象外。停滞通知成功時と古い価格での新規登録時はfalse |
 | last_notified_threshold | SMALLINT | 可 | null=未通知、その他は1〜99。設定変更後に設定に含まれない値も保持 |
 | last_checked_at | TIMESTAMPTZ | 不可 | 登録または日次処理の価格取得試行の完了日時。失敗でも更新 |
-| last_error_code | VARCHAR(32) | 可 | null、`PRICE_FETCH_FAILED`、`NOTIFICATION_FAILED`のいずれか |
+| last_error_code | VARCHAR(32) | 可 | null、`PRICE_FETCH_FAILED`、`NOTIFICATION_FAILED`、`PRICE_DATA_STALE`のいずれか |
 | created_at | TIMESTAMPTZ | 不可 | 登録日時、既定CURRENT_TIMESTAMP |
 | updated_at | TIMESTAMPTZ | 不可 | レコード更新日時。登録時は作成日時と同値 |
 
 価格の`NUMERIC`は精度・小数桁を固定しない。DB制約は`value > 0 AND value < 'Infinity'::numeric`を使用し、アプリでも有限性を検証する。最高値と最新値の更新は同一トランザクションとする。`updated_at`は価格・通知状態・エラー・有効状態の保存時に更新し、取得日時の代用にはしない。
+
+FMPのtimestamp専用の列は追加しない。日次処理で240時間以上前のデータを検知した場合、価格・最高値・`latest_fetched_at`・通知済み率を保持し、`last_checked_at`とエラーを保存する。停滞通知成功時は同じトランザクションで`enabled=false`にし、失敗時は有効状態を維持する。警告付きの新規登録では古い価格を最高値・最終取得値として保存し、停止状態・`PRICE_DATA_STALE`で開始する。手動再開では価格・通知済み率・エラーを変更しない。
 
 `decline_rate`は保存しない。`(highest_value-latest_value)/highest_value×100`から導出し、APIは小数2桁の文字列を返す。閾値判定・ソートは丸め前を使用する。価格をJSの浮動小数点数に変換して通知判定しない。
 
