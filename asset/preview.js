@@ -119,6 +119,14 @@
     let saved=clone(window.stockSample.settings.thresholds),edited=[...saved],updated=window.stockSample.settings.updated_at,busy=false,destination='assets.html';
     const dialog=$('discard-dialog');
     const dirty=()=>JSON.stringify(saved)!==JSON.stringify(edited);
+    function confirmLeave(target) {
+      destination=target;
+      if(!dirty())return true;
+      const logout=destination==='login.html';
+      $('discard-description').textContent=logout?'変更を破棄してログアウトしますか？':'変更を破棄して監視対象の一覧へ戻りますか？';
+      $('discard-confirm').textContent=logout?'破棄してログアウト':'破棄して戻る';
+      dialog.showModal();$('discard-cancel').focus();return false;
+    }
     function render() {
       const loading=state.value==='loading', failed=state.value==='load-error', saving=state.value==='saving'||busy;
       const locked=loading||failed||saving;
@@ -145,7 +153,8 @@
       event.preventDefault();if($('save-button').disabled)return;busy=true;render();setTimeout(()=>{saved=[...edited];updated=new Date().toISOString();busy=false;state.value='saved';render();},350);
     });
     $('retry-button').addEventListener('click',()=>{state.value='normal';render();});
-    for(const link of document.querySelectorAll('[data-leave]'))link.addEventListener('click',event=>{if(dirty()){event.preventDefault();destination=link.getAttribute('href');dialog.showModal();$('discard-cancel').focus();}});
+    for(const link of document.querySelectorAll('[data-leave]'))link.addEventListener('click',event=>{if(!confirmLeave(link.getAttribute('href')))event.preventDefault();});
+    $('logout-button').addEventListener('click',()=>{if(confirmLeave('login.html'))location.href=destination;});
     $('discard-cancel').addEventListener('click',()=>dialog.close());
     $('discard-confirm').addEventListener('click',()=>{saved=[...edited];location.href=destination;});
     window.addEventListener('beforeunload',event=>{if(dirty()){event.preventDefault();event.returnValue='';}});render();
