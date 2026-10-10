@@ -21,7 +21,7 @@
 | 項目 | 動作 |
 | --- | --- |
 | 検索`q` | 前後空白を除去したコード・名称の部分一致。大文字小文字を区別しない。最大200文字。`%`と`_`は文字として検索する |
-| ソート`sort` | `created_at`（既定）、`code`、`name`、`highest_value`、`latest_value`、`decline_rate`、`latest_fetched_at`、`enabled`、`last_notified_threshold` |
+| ソート`sort` | `created_at`（既定）、`code`、`name`、`highest_value`、`latest_value`、`decline_rate`、`latest_fetched_at`、`monitoring_enabled`、`last_notified_threshold` |
 | 順序`order` | `asc`（既定）、`desc`。数値は文字列順ではなく数値順。日時は時刻順、監視状態は停止=false→監視中=true |
 | 同値・未通知 | 同値は常に`id`昇順。未通知の`null`は昇順・降順どちらも末尾 |
 | 下落率ソート | 表示丸め前の下落率で比較する |
@@ -31,7 +31,7 @@
 
 ## 停止・再開・削除
 
-- `PATCH /api/v1/assets/{id}`で`enabled`を設定する。同じ値への更新も成功。停止中は日次処理から除外し、最高値・最終取得値・取得日時・通知済み率を保持する。
+- `PATCH /api/v1/assets/{id}`で`monitoring_enabled`を設定する。同じ値への更新も成功。停止中は日次処理から除外し、最高値・最終取得値・取得日時・通知済み率を保持する。
 - 再開による価格取得や通知はしない。次に日次処理の対象となった際に、保持した最高値と通知済み率で判定する。通常は翌日からだが、実行中の停止→再開では同じ実行で処理・通知され得る。停止期間中の値動きは補完しない。
 - 削除確認にコード・名称と「再登録時は最高値と通知済み状態が新しくなる」旨を表示する。確定後に`DELETE /api/v1/assets/{id}`を実行し、物理削除する。存在しなければ`404 ASSET_NOT_FOUND`。
 - 停止・再開・削除と監視処理の排他制御は行わない。監視中の操作は運用で避ける。同時実行時は停止・削除完了後の送信抑止や更新の整合性を保証しない。

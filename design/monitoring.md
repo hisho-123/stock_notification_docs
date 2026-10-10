@@ -18,8 +18,8 @@ FMP Quote応答の一致するレコードから`price`と`timestamp`を取得�
 
 | 停滞通知の結果 | 保存する状態と次回の扱い |
 | --- | --- |
-| LINEがHTTP 200で受付 | `enabled=false`、`last_error_code=PRICE_DATA_STALE`を保存。手動再開まで日次処理から除外する |
-| LINE送信失敗 | `enabled=true`を維持し、`last_error_code=NOTIFICATION_FAILED`を保存。同じ実行内では再送せず、翌日再取得して鮮度を再判定する |
+| LINEがHTTP 200で受付 | `monitoring_enabled=false`、`last_error_code=PRICE_DATA_STALE`を保存。手動再開まで日次処理から除外する |
+| LINE送信失敗 | `monitoring_enabled=true`を維持し、`last_error_code=NOTIFICATION_FAILED`を保存。同じ実行内では再送せず、翌日再取得して鮮度を再判定する |
 
 翌日に鮮度確認を通過すれば通常の下落判定へ戻る。まだ古ければ停滞通知を1回試み、受付成功時に停止する。自動停止後の自動再開・停止中の価格取得は行わない。手動再開時も即時取得・通知はせず、次に対象として処理される際に再判定する。
 

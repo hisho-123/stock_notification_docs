@@ -21,7 +21,7 @@
 | POST `/auth/logout` | ボディなし、CSRF必須 | 204：セッション失効・両Cookie削除 | 401、403、503 |
 | GET `/assets` | `q`, `sort`, `order` | 200：AssetList | 400、401、503 |
 | POST `/assets` | `code` | 201：Asset、Locationヘッダー | 400、401、403、409、422、502、503、504 |
-| PATCH `/assets/{id}` | `enabled` | 200：Asset | 400、401、403、404、503 |
+| PATCH `/assets/{id}` | `monitoring_enabled` | 200：Asset | 400、401、403、404、503 |
 | DELETE `/assets/{id}` | ボディなし | 204 | 400、401、403、404、503 |
 | GET `/settings/notifications` | なし | 200：NotificationSettings | 401、503 |
 | PUT `/settings/notifications` | `thresholds` | 200：NotificationSettings | 400、401、403、503 |
@@ -53,12 +53,12 @@ Cookie属性・有効期限は[認証仕様](../design/security-operations.md)�
 | パラメータ | 型・既定 | 制約 |
 | --- | --- | --- |
 | q | string、既定空文字 | 最大200文字、前後空白除去、コード・名称の大文字小文字を区別しない部分一致 |
-| sort | string、既定created_at | created_at / code / name / highest_value / latest_value / decline_rate / latest_fetched_at / enabled / last_notified_threshold |
+| sort | string、既定created_at | created_at / code / name / highest_value / latest_value / decline_rate / latest_fetched_at / monitoring_enabled / last_notified_threshold |
 | order | string、既定asc | asc / desc |
 
 同値はID昇順、NULLはどちらの順序でも末尾。数値は数値として、下落率は丸め前でソートする。件数`total`は検索適用後の件数で、`items`の長さと一致する。
 
-追加要求：`{"code":"^GSPC"}`。前後空白除去・ASCII英字大文字化後に重複確認し、外部価格取得を行う。監視状態変更要求：`{"enabled":false}`。追加・状態変更の成功応答は単一のAsset、一覧は次の形式。
+追加要求：`{"code":"^GSPC"}`。前後空白除去・ASCII英字大文字化後に重複確認し、外部価格取得を行う。監視状態変更要求：`{"monitoring_enabled":false}`。追加・状態変更の成功応答は単一のAsset、一覧は次の形式。
 
 ```json
 {
@@ -71,7 +71,7 @@ Cookie属性・有効期限は[認証仕様](../design/security-operations.md)�
       "latest_value": "5100",
       "decline_rate": "15.00",
       "latest_fetched_at": "2026-10-07T22:00:00Z",
-      "enabled": true,
+      "monitoring_enabled": true,
       "last_notified_threshold": 15,
       "last_checked_at": "2026-10-07T22:00:00Z",
       "last_error_code": null,
@@ -87,7 +87,7 @@ AssetのIDはDBのIDに対応。`latest_fetched_at`は最後に保存した価�
 
 `last_error_code`はnull / `PRICE_FETCH_FAILED` / `NOTIFICATION_FAILED` / `PRICE_DATA_STALE`のいずれか。`PRICE_DATA_STALE`は240時間以上前のデータによる警告付き停止登録、または停滞通知成功による自動停止を示す。一覧には「価格データが10日以上前」と表示する。停滞通知失敗時は監視中・`NOTIFICATION_FAILED`で翌日再判定する。一覧GET自体はその銘柄にエラーがあっても200で返す。
 
-登録ではFMPの価格とUNIX秒の整数timestampを検証する。timestampの欠落・不正は`502 PRICE_PROVIDER_ERROR`。取得完了時刻との差が240時間以上でも登録は成功し、取得価格を初期最高値・最終取得値、通知済み率をnull、`enabled=false`、`last_error_code=PRICE_DATA_STALE`として201を返す。10日未満なら監視中・エラーなし。どちらもLINE送信なし。判定の詳細は[通知・日次処理仕様](../design/monitoring.md)を参照する。
+登録ではFMPの価格とUNIX秒の整数timestampを検証する。timestampの欠落・不正は`502 PRICE_PROVIDER_ERROR`。取得完了時刻との差が240時間以上でも登録は成功し、取得価格を初期最高値・最終取得値、通知済み率をnull、`monitoring_enabled=false`、`last_error_code=PRICE_DATA_STALE`として201を返す。10日未満なら監視中・エラーなし。どちらもLINE送信なし。判定の詳細は[通知・日次処理仕様](../design/monitoring.md)を参照する。
 
 PATCHによる再開ではエラーを解消せず、即時取得・通知もしない。監視中の停止・再開・削除は運用で避け、監視処理との競合を排他制御しない。
 

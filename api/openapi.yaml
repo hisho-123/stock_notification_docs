@@ -159,7 +159,7 @@ paths:
                   latest_value: '5100'
                   decline_rate: '15.00'
                   latest_fetched_at: '2026-10-07T22:00:00Z'
-                  enabled: true
+                  monitoring_enabled: true
                   last_notified_threshold: 15
                   last_checked_at: '2026-10-07T22:00:00Z'
                   last_error_code: null
@@ -195,7 +195,7 @@ paths:
           - latest_value
           - decline_rate
           - latest_fetched_at
-          - enabled
+          - monitoring_enabled
           - last_notified_threshold
           default: created_at
         description: 数値は数値順、下落率は丸め前。同値はID昇順、nullは末尾。
@@ -238,7 +238,7 @@ paths:
                     latest_value: '6000'
                     decline_rate: '0.00'
                     latest_fetched_at: '2026-10-07T22:00:00Z'
-                    enabled: true
+                    monitoring_enabled: true
                     last_notified_threshold: null
                     last_checked_at: '2026-10-07T22:00:00Z'
                     last_error_code: null
@@ -254,7 +254,7 @@ paths:
                     latest_value: '6000'
                     decline_rate: '0.00'
                     latest_fetched_at: '2026-10-07T22:00:00Z'
-                    enabled: false
+                    monitoring_enabled: false
                     last_notified_threshold: null
                     last_checked_at: '2026-10-07T22:00:00Z'
                     last_error_code: PRICE_DATA_STALE
@@ -328,7 +328,7 @@ paths:
                 latest_value: '5100'
                 decline_rate: '15.00'
                 latest_fetched_at: '2026-10-07T22:00:00Z'
-                enabled: false
+                monitoring_enabled: false
                 last_notified_threshold: 15
                 last_checked_at: '2026-10-07T22:00:00Z'
                 last_error_code: null
@@ -348,7 +348,7 @@ paths:
           $ref: '#/components/responses/ServiceUnavailable'
         '500':
           $ref: '#/components/responses/InternalError'
-      description: enabledだけ変更可。同じ状態でも成功。再開直後の価格取得・通知なし、エラーは保持。監視中の操作は運用で避け、競合時の整合性は保証しない。
+      description: monitoring_enabledだけ変更可。同じ状態でも成功。再開直後の価格取得・通知なし、エラーは保持。監視中の操作は運用で避け、競合時の整合性は保証しない。
       parameters:
       - name: id
         in: path
@@ -376,7 +376,7 @@ paths:
             schema:
               $ref: '#/components/schemas/UpdateAsset'
             example:
-              enabled: false
+              monitoring_enabled: false
     delete:
       operationId: deleteAsset
       tags:
@@ -535,7 +535,7 @@ components:
       - latest_value
       - decline_rate
       - latest_fetched_at
-      - enabled
+      - monitoring_enabled
       - last_notified_threshold
       - last_checked_at
       - last_error_code
@@ -571,9 +571,9 @@ components:
           type: string
           format: date-time
           description: 保存対象価格の取得完了時刻（UTC）。日次処理は鮮度確認通過時だけ更新。警告付き登録では古い価格でも記録。FMPのtimestampではない。
-        enabled:
+        monitoring_enabled:
           type: boolean
-          description: falseは日次処理対象外。古い価格での登録と停滞通知成功時はfalse。停滞通知失敗時はtrueを維持。
+          description: 日次の価格取得・最高値更新・通知判定を有効にする。falseは日次処理対象外。古い価格での登録と停滞通知成功時はfalse。停滞通知失敗時はtrueを維持。
         last_notified_threshold:
           type: integer
           minimum: 1
@@ -608,7 +608,7 @@ components:
         latest_value: '5100'
         decline_rate: '15.00'
         latest_fetched_at: '2026-10-07T22:00:00Z'
-        enabled: true
+        monitoring_enabled: true
         last_notified_threshold: 15
         last_checked_at: '2026-10-07T22:00:00Z'
         last_error_code: null
@@ -644,9 +644,9 @@ components:
       type: object
       additionalProperties: false
       required:
-      - enabled
+      - monitoring_enabled
       properties:
-        enabled:
+        monitoring_enabled:
           type: boolean
           description: 停止・再開のみ。最高値と通知済み率は保持する。
     UpdateNotificationSettings:
