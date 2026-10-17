@@ -1,0 +1,26 @@
+{
+  "openapi": {
+    "version": "3.0.3",
+    "operations": 12,
+    "schemas": 15
+  },
+  "references": 135,
+  "examples": 48,
+  "local_links": 106,
+  "html_files": 4,
+  "contract_checks": [
+    "registration request",
+    "legacy admin_id rejected",
+    "login_id required",
+    "registration LINE substitution rejected",
+    "extra user_id rejected",
+    "token length rejected",
+    "ID 100 accepted",
+    "ID 101 rejected",
+    "asset owner substitution rejected",
+    "settings owner substitution rejected",
+    "webhook empty events",
+    "webhook extension allowed",
+    "session LINE identity absent"
+  ]
+}
