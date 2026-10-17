@@ -1,0 +1,114 @@
+[
+  {
+    "name": "未認証401 /auth/session",
+    "pass": true
+  },
+  {
+    "name": "未認証401 /assets",
+    "pass": true
+  },
+  {
+    "name": "未認証401 /settings/notifications",
+    "pass": true
+  },
+  {
+    "name": "ログインOrigin拒否 None",
+    "pass": true
+  },
+  {
+    "name": "ログインOrigin拒否 https://example.invalid",
+    "pass": true
+  },
+  {
+    "name": "実APIログイン成功",
+    "pass": true
+  },
+  {
+    "name": "__Host- Cookieが2件",
+    "pass": true
+  },
+  {
+    "name": "CookieのSecure・HttpOnly・Strict・Path・24時間 0",
+    "pass": true
+  },
+  {
+    "name": "CookieのSecure・HttpOnly・Strict・Path・24時間 1",
+    "pass": true
+  },
+  {
+    "name": "CSRF不一致403 False",
+    "pass": true
+  },
+  {
+    "name": "CSRF不一致403 True",
+    "pass": true
+  },
+  {
+    "name": "更新Origin欠落403",
+    "pass": true
+  },
+  {
+    "name": "JSON以外415",
+    "pass": true
+  },
+  {
+    "name": "未知項目400",
+    "pass": true
+  },
+  {
+    "name": "不正通知率400 []",
+    "pass": true
+  },
+  {
+    "name": "不正通知率400 [10, 10]",
+    "pass": true
+  },
+  {
+    "name": "不正通知率400 [0]",
+    "pass": true
+  },
+  {
+    "name": "不正通知率400 [100]",
+    "pass": true
+  },
+  {
+    "name": "不正通知率400 [1.5]",
+    "pass": true
+  },
+  {
+    "name": "不正通知率400 [\"10\"]",
+    "pass": true
+  },
+  {
+    "name": "不正通知率400 [null]",
+    "pass": true
+  },
+  {
+    "name": "不正更新で設定変更なし",
+    "pass": true
+  },
+  {
+    "name": "不正ID400",
+    "pass": true
+  },
+  {
+    "name": "存在しないID404",
+    "pass": true
+  },
+  {
+    "name": "通知済み率NULLは末尾 asc",
+    "pass": true
+  },
+  {
+    "name": "通知済み率NULLは末尾 desc",
+    "pass": true
+  },
+  {
+    "name": "ログアウト204",
+    "pass": true
+  },
+  {
+    "name": "旧Cookieはログアウト後401",
+    "pass": true
+  }
+]

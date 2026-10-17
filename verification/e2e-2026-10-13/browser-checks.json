@@ -1,0 +1,238 @@
+[
+  {
+    "name": "ログイン失敗メッセージ",
+    "pass": true
+  },
+  {
+    "name": "ログイン成功と未登録表示",
+    "pass": true
+  },
+  {
+    "name": "失敗時パスワード消去",
+    "pass": true
+  },
+  {
+    "name": "ログアウト失敗時に画面・入力を保持",
+    "pass": true
+  },
+  {
+    "name": "ログアウトしてログインへ戻る",
+    "pass": true
+  },
+  {
+    "name": "スマートフォンのログイン画面に横はみ出しなし",
+    "pass": true
+  },
+  {
+    "name": "銘柄正規化・高精度価格表示",
+    "pass": true
+  },
+  {
+    "name": "再読込で認証と登録内容を復元",
+    "pass": true
+  },
+  {
+    "name": "古い価格は停止・警告・0.00%で登録",
+    "pass": true
+  },
+  {
+    "name": "名称欠落はコードを表示",
+    "pass": true
+  },
+  {
+    "name": "古い価格は手動再開後も警告を保持",
+    "pass": true
+  },
+  {
+    "name": "停止・再開で外部価格取得・通知なし",
+    "pass": true
+  },
+  {
+    "name": "登録エラー AAPL",
+    "pass": true
+  },
+  {
+    "name": "登録エラー NOPE",
+    "pass": true
+  },
+  {
+    "name": "登録エラー ZERO",
+    "pass": true
+  },
+  {
+    "name": "登録エラー INVALIDTIME",
+    "pass": true
+  },
+  {
+    "name": "登録エラー PROVIDER",
+    "pass": true
+  },
+  {
+    "name": "不正登録で件数増加なし",
+    "pass": true
+  },
+  {
+    "name": "小文字の名称検索",
+    "pass": true
+  },
+  {
+    "name": "記号をワイルドカードにしない %",
+    "pass": true
+  },
+  {
+    "name": "記号をワイルドカードにしない _",
+    "pass": true
+  },
+  {
+    "name": "検索0件の専用表示",
+    "pass": true
+  },
+  {
+    "name": "価格を数値順・同値はID順でソート",
+    "pass": true
+  },
+  {
+    "name": "価格の降順ソート",
+    "pass": true
+  },
+  {
+    "name": "削除ダイアログの初期フォーカスは取消",
+    "pass": true
+  },
+  {
+    "name": "Escで削除を取消・元ボタンへフォーカス復帰",
+    "pass": true
+  },
+  {
+    "name": "削除取消で登録を保持",
+    "pass": true
+  },
+  {
+    "name": "空の銘柄コードを入力エラーにする",
+    "pass": true
+  },
+  {
+    "name": "未変更の通知設定は保存不可",
+    "pass": true
+  },
+  {
+    "name": "通知率入力エラー 10",
+    "pass": true
+  },
+  {
+    "name": "通知率入力エラー 0",
+    "pass": true
+  },
+  {
+    "name": "通知率入力エラー 100",
+    "pass": true
+  },
+  {
+    "name": "通知率入力エラー 1.5",
+    "pass": true
+  },
+  {
+    "name": "離脱確認をEscで取消し編集保持",
+    "pass": true
+  },
+  {
+    "name": "未保存ログアウト取消で編集保持",
+    "pass": true
+  },
+  {
+    "name": "通知率を実DBへ保存",
+    "pass": true
+  },
+  {
+    "name": "設定は再読み込み後も保持",
+    "pass": true
+  },
+  {
+    "name": "未保存変更を破棄してログアウト",
+    "pass": true
+  },
+  {
+    "name": "未保存5%はDBへ反映しない",
+    "pass": true
+  },
+  {
+    "name": "空の通知率は保存不可",
+    "pass": true
+  },
+  {
+    "name": "通知率の昇順保存",
+    "pass": true
+  },
+  {
+    "name": "PC設定画面に横はみ出しなし",
+    "pass": true
+  },
+  {
+    "name": "スマートフォン設定画面に横はみ出しなし",
+    "pass": true
+  },
+  {
+    "name": "TSLAを削除して一覧から除去",
+    "pass": true
+  },
+  {
+    "name": "削除したコードを未通知で再登録",
+    "pass": true
+  },
+  {
+    "name": "スマートフォン一覧に横はみ出しなし",
+    "pass": true
+  },
+  {
+    "name": "モバイル一覧の横スクロールはテーブル内だけ",
+    "pass": true
+  },
+  {
+    "name": "テーブルはキーボードで横スクロール可能",
+    "pass": true
+  },
+  {
+    "name": "PC一覧画面に横はみ出しなし",
+    "pass": true
+  },
+  {
+    "name": "監視コマンドの結果をUIへ反映",
+    "pass": true
+  },
+  {
+    "name": "停滞通知後の自動停止をUIへ反映",
+    "pass": true
+  },
+  {
+    "name": "価格取得タイムアウトを表示し登録しない",
+    "pass": true
+  },
+  {
+    "name": "一覧取得失敗時に直前の7件を保持",
+    "pass": true
+  },
+  {
+    "name": "設定初期取得失敗時に編集不可",
+    "pass": true
+  },
+  {
+    "name": "設定取得失敗時もログアウトを表示",
+    "pass": true
+  },
+  {
+    "name": "設定取得を再試行して復帰",
+    "pass": true
+  },
+  {
+    "name": "設定保存失敗時に編集値を保持",
+    "pass": true
+  },
+  {
+    "name": "設定保存失敗時に再保存可能",
+    "pass": true
+  },
+  {
+    "name": "通信復旧後に編集値を再保存できる",
+    "pass": true
+  }
+]
