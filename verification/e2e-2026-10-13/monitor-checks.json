@@ -1,0 +1,126 @@
+[
+  {
+    "name": "27%下落は25%を1通通知",
+    "pass": true,
+    "actual": {
+      "exit": 0,
+      "line_count": 1,
+      "highest": "100",
+      "latest": "73",
+      "threshold": 25,
+      "error": null
+    }
+  },
+  {
+    "name": "同じ下落率で再通知しない",
+    "pass": true,
+    "actual": {
+      "exit": 0,
+      "line_count": 0,
+      "highest": "100",
+      "latest": "73",
+      "threshold": 25,
+      "error": null
+    }
+  },
+  {
+    "name": "最高値更新で未通知へリセット",
+    "pass": true,
+    "actual": {
+      "exit": 0,
+      "line_count": 0,
+      "highest": "110",
+      "latest": "110",
+      "threshold": null,
+      "error": null
+    }
+  },
+  {
+    "name": "新最高値から10%下落で通知",
+    "pass": true,
+    "actual": {
+      "exit": 0,
+      "line_count": 1,
+      "highest": "110",
+      "latest": "99",
+      "threshold": 10,
+      "error": null
+    }
+  },
+  {
+    "name": "LINE失敗は通知済み率を保持",
+    "pass": true,
+    "actual": {
+      "exit": 1,
+      "line_count": 1,
+      "highest": "110",
+      "latest": "73",
+      "threshold": 10,
+      "error": "NOTIFICATION_FAILED"
+    }
+  },
+  {
+    "name": "翌実行で回復した価格は急落通知を繰り越さない",
+    "pass": true,
+    "actual": {
+      "exit": 0,
+      "line_count": 0,
+      "highest": "110",
+      "latest": "105",
+      "threshold": 10,
+      "error": null
+    }
+  },
+  {
+    "name": "FMP失敗は価格・最高値・通知済み率を保持",
+    "pass": true,
+    "actual": {
+      "exit": 1,
+      "line_count": 0,
+      "highest": "110",
+      "latest": "105",
+      "threshold": 10,
+      "error": "PRICE_FETCH_FAILED"
+    }
+  },
+  {
+    "name": "価格取得が正常化するとエラー解消",
+    "pass": true,
+    "actual": {
+      "exit": 0,
+      "line_count": 0,
+      "highest": "110",
+      "latest": "105",
+      "threshold": 10,
+      "error": null
+    }
+  },
+  {
+    "name": "古い価格は停滞通知後に自動停止",
+    "pass": true,
+    "actual": {
+      "exit": 1,
+      "line_count": 1,
+      "highest": "110",
+      "latest": "105",
+      "threshold": 10,
+      "error": null
+    }
+  },
+  {
+    "name": "自動停止後は価格取得も通知も行わない",
+    "pass": true,
+    "actual": {
+      "exit": 0,
+      "line_count": 0,
+      "highest": "110",
+      "latest": "105",
+      "threshold": 10,
+      "error": null
+    }
+  },
+  {
+    "name": "TSLAは削除後の新ID・未通知で再登録",
+    "pass": true
+  }
+]
