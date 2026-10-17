@@ -1,0 +1,354 @@
+{
+  "checks": [
+    {
+      "name": "1440 register normal width",
+      "passed": true
+    },
+    {
+      "name": "1440 register loading width",
+      "passed": true
+    },
+    {
+      "name": "1440 register load-error width",
+      "passed": true
+    },
+    {
+      "name": "1440 register sending width",
+      "passed": true
+    },
+    {
+      "name": "1440 register id-conflict width",
+      "passed": true
+    },
+    {
+      "name": "1440 register invalid width",
+      "passed": true
+    },
+    {
+      "name": "1440 register expired width",
+      "passed": true
+    },
+    {
+      "name": "1440 register used width",
+      "passed": true
+    },
+    {
+      "name": "1440 register revoked width",
+      "passed": true
+    },
+    {
+      "name": "1440 register network-error width",
+      "passed": true
+    },
+    {
+      "name": "1440 register limited width",
+      "passed": true
+    },
+    {
+      "name": "1440 register success width",
+      "passed": true
+    },
+    {
+      "name": "1440 login normal width",
+      "passed": true
+    },
+    {
+      "name": "1440 login sending width",
+      "passed": true
+    },
+    {
+      "name": "1440 login auth-error width",
+      "passed": true
+    },
+    {
+      "name": "1440 login network-error width",
+      "passed": true
+    },
+    {
+      "name": "1440 login limited width",
+      "passed": true
+    },
+    {
+      "name": "1440 assets normal width",
+      "passed": true
+    },
+    {
+      "name": "1440 assets loading width",
+      "passed": true
+    },
+    {
+      "name": "1440 assets empty width",
+      "passed": true
+    },
+    {
+      "name": "1440 assets no-results width",
+      "passed": true
+    },
+    {
+      "name": "1440 assets network-error width",
+      "passed": true
+    },
+    {
+      "name": "1440 assets adding width",
+      "passed": true
+    },
+    {
+      "name": "1440 settings normal width",
+      "passed": true
+    },
+    {
+      "name": "1440 settings loading width",
+      "passed": true
+    },
+    {
+      "name": "1440 settings load-error width",
+      "passed": true
+    },
+    {
+      "name": "1440 settings saving width",
+      "passed": true
+    },
+    {
+      "name": "1440 settings save-error width",
+      "passed": true
+    },
+    {
+      "name": "1440 settings saved width",
+      "passed": true
+    },
+    {
+      "name": "390 register normal width",
+      "passed": true
+    },
+    {
+      "name": "390 register loading width",
+      "passed": true
+    },
+    {
+      "name": "390 register load-error width",
+      "passed": true
+    },
+    {
+      "name": "390 register sending width",
+      "passed": true
+    },
+    {
+      "name": "390 register id-conflict width",
+      "passed": true
+    },
+    {
+      "name": "390 register invalid width",
+      "passed": true
+    },
+    {
+      "name": "390 register expired width",
+      "passed": true
+    },
+    {
+      "name": "390 register used width",
+      "passed": true
+    },
+    {
+      "name": "390 register revoked width",
+      "passed": true
+    },
+    {
+      "name": "390 register network-error width",
+      "passed": true
+    },
+    {
+      "name": "390 register limited width",
+      "passed": true
+    },
+    {
+      "name": "390 register success width",
+      "passed": true
+    },
+    {
+      "name": "390 login normal width",
+      "passed": true
+    },
+    {
+      "name": "390 login sending width",
+      "passed": true
+    },
+    {
+      "name": "390 login auth-error width",
+      "passed": true
+    },
+    {
+      "name": "390 login network-error width",
+      "passed": true
+    },
+    {
+      "name": "390 login limited width",
+      "passed": true
+    },
+    {
+      "name": "390 assets normal width",
+      "passed": true
+    },
+    {
+      "name": "390 assets loading width",
+      "passed": true
+    },
+    {
+      "name": "390 assets empty width",
+      "passed": true
+    },
+    {
+      "name": "390 assets no-results width",
+      "passed": true
+    },
+    {
+      "name": "390 assets network-error width",
+      "passed": true
+    },
+    {
+      "name": "390 assets adding width",
+      "passed": true
+    },
+    {
+      "name": "390 settings normal width",
+      "passed": true
+    },
+    {
+      "name": "390 settings loading width",
+      "passed": true
+    },
+    {
+      "name": "390 settings load-error width",
+      "passed": true
+    },
+    {
+      "name": "390 settings saving width",
+      "passed": true
+    },
+    {
+      "name": "390 settings save-error width",
+      "passed": true
+    },
+    {
+      "name": "390 settings saved width",
+      "passed": true
+    },
+    {
+      "name": "registration empty ID focused",
+      "passed": true
+    },
+    {
+      "name": "registration ID 101 rejected",
+      "passed": true
+    },
+    {
+      "name": "registration password 7 bytes rejected",
+      "passed": true
+    },
+    {
+      "name": "registration multibyte 75 bytes rejected",
+      "passed": true
+    },
+    {
+      "name": "duplicate ID preserves ID",
+      "passed": true
+    },
+    {
+      "name": "duplicate ID clears password",
+      "passed": true
+    },
+    {
+      "name": "editing duplicate ID clears error",
+      "passed": true
+    },
+    {
+      "name": "invalid form hidden",
+      "passed": true
+    },
+    {
+      "name": "invalid recovery available",
+      "passed": true
+    },
+    {
+      "name": "expired form hidden",
+      "passed": true
+    },
+    {
+      "name": "expired recovery available",
+      "passed": true
+    },
+    {
+      "name": "used form hidden",
+      "passed": true
+    },
+    {
+      "name": "used recovery available",
+      "passed": true
+    },
+    {
+      "name": "revoked form hidden",
+      "passed": true
+    },
+    {
+      "name": "revoked recovery available",
+      "passed": true
+    },
+    {
+      "name": "loading submit blocked",
+      "passed": true
+    },
+    {
+      "name": "load-error submit blocked",
+      "passed": true
+    },
+    {
+      "name": "sending submit blocked",
+      "passed": true
+    },
+    {
+      "name": "network-error submit blocked",
+      "passed": true
+    },
+    {
+      "name": "limited submit blocked",
+      "passed": true
+    },
+    {
+      "name": "validation retry restores form",
+      "passed": true
+    },
+    {
+      "name": "registration 8 UTF-8 bytes accepted and navigates",
+      "passed": true
+    },
+    {
+      "name": "registration ID 100 and password 72 bytes accepted",
+      "passed": true
+    },
+    {
+      "name": "login password lower bound",
+      "passed": true
+    },
+    {
+      "name": "login navigates after ID rename",
+      "passed": true
+    },
+    {
+      "name": "asset addition regression",
+      "passed": true
+    },
+    {
+      "name": "settings save regression",
+      "passed": true
+    },
+    {
+      "name": "JavaScript exceptions absent",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "total": 86,
+  "screenshots": [
+    "register-1440.png",
+    "register-390.png"
+  ]
+}
