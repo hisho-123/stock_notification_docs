@@ -1,24 +1,177 @@
 openapi: 3.0.3
 info:
   title: 株・指数の下落通知サービス API
-  version: 1.0.0
-  description: ReactとGoを同一オリジンで提供する単一管理者向けAPI。価格・IDは文字列、日時はUTC。本文書のサンプル価格は仮の値。
+  version: 2.0.0
+  description: ReactとGoを同一オリジンで提供する複数ユーザー向けAPI。銘柄・設定はセッションのlogin_idで所有者を限定する。価格・IDは文字列、日時はUTC。本文書のサンプル価格は仮の値。
 servers:
 - url: /api/v1
   description: 同一オリジンのAPI
 tags:
 - name: 認証
+- name: ユーザー登録
+- name: LINE連携
 - name: 監視対象
 - name: 通知設定
 security:
 - CookieAuth: []
 paths:
+  /auth/registration/validate:
+    post:
+      operationId: validateRegistration
+      tags:
+      - ユーザー登録
+      summary: 登録URLの有効性を確認（消費しない）
+      security: []
+      parameters:
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uri
+        description: PUBLIC_ORIGINと完全一致。欠落も403。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrationToken'
+            example:
+              registration_token: sample-registration-token-00000000000000000
+      responses:
+        '200':
+          description: 有効な未使用URL。LINEユーザーIDは返さない。
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationValidity'
+              example:
+                expires_at: '2026-10-18T00:00:00Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '410':
+          $ref: '#/components/responses/RegistrationLinkUnavailable'
+  /auth/register:
+    post:
+      operationId: register
+      tags:
+      - ユーザー登録
+      summary: LINEに紐付くユーザーを登録し自動ログイン
+      security: []
+      parameters:
+      - name: Origin
+        in: header
+        required: true
+        schema:
+          type: string
+          format: uri
+        description: PUBLIC_ORIGINと完全一致。欠落も403。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+            example:
+              registration_token: sample-registration-token-00000000000000000
+              login_id: owner
+              password: example-password
+      responses:
+        '201':
+          description: ユーザー・初期通知設定・セッション作成とトークン消費を同一トランザクションで完了。旧Cookieのセッションを置換。
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            Set-Cookie:
+              schema:
+                type: string
+              description: __Host-stock_sessionと__Host-stock_csrfを個別のSet-Cookieで発行。Secure・HttpOnly・SameSite=Strict・Path=/・Domainなし・Max-Age=86400。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              example:
+                login_id: owner
+                expires_at: '2026-10-18T00:00:00Z'
+                csrf_token: sample-csrf-token-for-documentation-only
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '409':
+          $ref: '#/components/responses/LoginIdAlreadyExists'
+        '410':
+          $ref: '#/components/responses/RegistrationLinkUnavailable'
+  /webhooks/line:
+    post:
+      operationId: receiveLineWebhook
+      tags:
+      - LINE連携
+      summary: LINE Webhookを受信
+      security:
+      - LineSignature: []
+      description: Cookie・Origin・CSRF不要。未加工の本文で署名検証後、1対1トークのfollow/unfollow/テキスト「登録」を処理。events=[]、重複、古いイベント、未対応イベントは200。LINEの未知プロパティを許可する。業務処理コミット前のDB失敗は503、コミット後の返信失敗は履歴に保存して200。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LineWebhook'
+            example:
+              destination: U00000000000000000000000000000000
+              events:
+              - type: follow
+                webhookEventId: 01SAMPLEEVENT00000000000000
+                timestamp: 1792195200000
+                source:
+                  type: user
+                  userId: U11111111111111111111111111111111
+                replyToken: sample-reply-token
+                deliveryContext:
+                  isRedelivery: false
+      responses:
+        '200':
+          description: 受信・処理済み、または無視。本文なし。LINEへの返信・ユーザーへの配信の成功を保証しない。
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/InvalidLineSignature'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /auth/login:
     post:
       operationId: login
       tags:
       - 認証
-      summary: 管理者ログイン
+      summary: ユーザーログイン
       responses:
         '200':
           description: 認証成功・24時間セッション発行
@@ -34,7 +187,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Session'
               example:
-                admin_id: owner
+                login_id: owner
                 expires_at: '2026-10-08T22:00:00Z'
                 csrf_token: sample-csrf-token-for-documentation-only
         '400':
@@ -66,7 +219,7 @@ paths:
             schema:
               $ref: '#/components/schemas/Login'
             example:
-              admin_id: owner
+              login_id: owner
               password: example-password
       security: []
   /auth/session:
@@ -86,7 +239,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Session'
               example:
-                admin_id: owner
+                login_id: owner
                 expires_at: '2026-10-08T22:00:00Z'
                 csrf_token: sample-csrf-token-for-documentation-only
         '401':
@@ -133,7 +286,7 @@ paths:
         schema:
           type: string
           minLength: 32
-        description: ログインまたはセッションAPIで取得したCSRFトークン。
+        description: ログイン・登録またはセッションAPIで取得したCSRFトークン。
   /assets:
     get:
       operationId: listAssets
@@ -295,7 +448,7 @@ paths:
         schema:
           type: string
           minLength: 32
-        description: ログインまたはセッションAPIで取得したCSRFトークン。
+        description: ログイン・登録またはセッションAPIで取得したCSRFトークン。
       requestBody:
         required: true
         content:
@@ -368,7 +521,7 @@ paths:
         schema:
           type: string
           minLength: 32
-        description: ログインまたはセッションAPIで取得したCSRFトークン。
+        description: ログイン・登録またはセッションAPIで取得したCSRFトークン。
       requestBody:
         required: true
         content:
@@ -420,13 +573,13 @@ paths:
         schema:
           type: string
           minLength: 32
-        description: ログインまたはセッションAPIで取得したCSRFトークン。
+        description: ログイン・登録またはセッションAPIで取得したCSRFトークン。
   /settings/notifications:
     get:
       operationId: getNotificationSettings
       tags:
       - 通知設定
-      summary: 全銘柄共通の通知率を取得
+      summary: 本人の全銘柄に適用する通知率を取得
       responses:
         '200':
           description: 共通通知設定
@@ -458,7 +611,7 @@ paths:
       summary: 共通通知率を置換
       responses:
         '200':
-          description: 昇順で保存した共通設定
+          description: 本人の昇順で保存した通知設定
           headers:
             Cache-Control:
               $ref: '#/components/headers/NoStore'
@@ -499,7 +652,7 @@ paths:
         schema:
           type: string
           minLength: 32
-        description: ログインまたはセッションAPIで取得したCSRFトークン。
+        description: ログイン・登録またはセッションAPIで取得したCSRFトークン。
       requestBody:
         required: true
         content:
@@ -513,12 +666,129 @@ paths:
               - 20
 components:
   securitySchemes:
+    LineSignature:
+      type: apiKey
+      in: header
+      name: X-Line-Signature
+      description: LINE_CHANNEL_SECRETを鍵に未加工の本文からHMAC-SHA256・Base64で検証。署名欠落・不一致は403。
     CookieAuth:
       type: apiKey
       in: cookie
       name: __Host-stock_session
-      description: ログインAPIで発行。変更系はさらにOriginとX-CSRF-Tokenを要求する。
+      description: ログイン・登録APIで発行。保護APIの変更系はさらにOriginとX-CSRF-Tokenを要求する。公開APIは操作ごとに認証を上書きする。
   schemas:
+    RegistrationToken:
+      type: object
+      additionalProperties: false
+      required:
+      - registration_token
+      properties:
+        registration_token:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{43}$"
+          writeOnly: true
+          description: 32バイト乱数のBase64URL（パディングなし）。24時間・1回限り。
+          example: sample-registration-token-00000000000000000
+    RegistrationValidity:
+      type: object
+      additionalProperties: false
+      required:
+      - expires_at
+      properties:
+        expires_at:
+          type: string
+          format: date-time
+          description: URLの失効時刻（UTC）。この時刻ちょうどで利用不可。
+    Register:
+      type: object
+      additionalProperties: false
+      required:
+      - registration_token
+      - login_id
+      - password
+      properties:
+        registration_token:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{43}$"
+          writeOnly: true
+          description: 32バイト乱数のBase64URL（パディングなし）。24時間・1回限り。
+          example: sample-registration-token-00000000000000000
+        login_id:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: アプリのユーザー識別子。完全一致で大小文字・前後空白を区別し、正規化しない。変更不可。
+          example: owner
+        password:
+          type: string
+          format: password
+          minLength: 1
+          maxLength: 72
+          writeOnly: true
+          description: UTF-8で8〜72バイト。バイト長はアプリで検証する。空白を除去しない。
+          example: example-password
+    LineWebhook:
+      type: object
+      additionalProperties: true
+      required:
+      - destination
+      - events
+      properties:
+        destination:
+          type: string
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineWebhookEvent'
+    LineWebhookEvent:
+      type: object
+      additionalProperties: true
+      required:
+      - type
+      properties:
+        type:
+          type: string
+          description: 未知のイベントも受理して無視する。
+        webhookEventId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: 処理対象イベントでは必須。重複排除キー。
+        timestamp:
+          type: integer
+          format: int64
+          minimum: 0
+          description: 処理対象イベントでは必須。UNIXミリ秒。順序判定に使用。
+        source:
+          type: object
+          additionalProperties: true
+          required:
+          - type
+          properties:
+            type:
+              type: string
+            userId:
+              type: string
+              pattern: "^U[0-9a-f]{32}$"
+        replyToken:
+          type: string
+          description: 返信するイベントでは必須。保存・ログ出力しない。
+        message:
+          type: object
+          additionalProperties: true
+          required:
+          - type
+          properties:
+            type:
+              type: string
+            text:
+              type: string
+        deliveryContext:
+          type: object
+          additionalProperties: true
+          properties:
+            isRedelivery:
+              type: boolean
     AssetId:
       type: string
       pattern: ^[1-9][0-9]{0,18}$
@@ -585,7 +855,7 @@ components:
           description: 最後の価格取得試行完了時刻（UTC）。取得失敗・古いデータ検知でも更新。
         last_error_code:
           type: string
-          description: PRICE_DATA_STALEは10日以上前の価格による停止登録・自動停止。NOTIFICATION_FAILEDは下落または停滞通知の失敗。手動再開では保持する。
+          description: PRICE_DATA_STALEは10日以上前の価格による停止登録・自動停止、またはブロック中の停滞検知（監視継続）。NOTIFICATION_FAILEDは下落または停滞通知の失敗。手動再開では保持する。
           nullable: true
           enum:
           - PRICE_FETCH_FAILED
@@ -664,7 +934,7 @@ components:
             type: integer
             minimum: 1
             maximum: 99
-          description: 全銘柄共通。入力順は任意、保存・返却時は昇順。
+          description: 本人の全銘柄に適用。入力順は任意、保存・返却時は昇順。
           example:
           - 10
           - 15
@@ -687,7 +957,7 @@ components:
             type: integer
             minimum: 1
             maximum: 99
-          description: 昇順の共通閾値
+          description: 本人の全銘柄に適用する昇順の閾値
         updated_at:
           type: string
           format: date-time
@@ -696,30 +966,31 @@ components:
       type: object
       additionalProperties: false
       required:
-      - admin_id
+      - login_id
       - password
       properties:
-        admin_id:
+        login_id:
           type: string
           minLength: 1
           maxLength: 100
+          description: 大小文字・前後空白を区別する完全一致のログインID。変更不可。
           example: owner
         password:
           type: string
           format: password
           minLength: 1
           maxLength: 72
-          description: UTF-8で72バイト以下。空白を除去しない。
+          description: UTF-8で8〜72バイト。空白を除去しない。バイト長はアプリで検証し、文字数だけで判定しない。
           example: example-password
     Session:
       type: object
       additionalProperties: false
       required:
-      - admin_id
+      - login_id
       - expires_at
       - csrf_token
       properties:
-        admin_id:
+        login_id:
           type: string
           minLength: 1
           maxLength: 100
@@ -750,6 +1021,9 @@ components:
               enum:
               - VALIDATION_ERROR
               - INVALID_CREDENTIALS
+              - LOGIN_ID_ALREADY_EXISTS
+              - REGISTRATION_LINK_UNAVAILABLE
+              - INVALID_LINE_SIGNATURE
               - UNAUTHENTICATED
               - CSRF_FAILED
               - ASSET_NOT_FOUND
@@ -770,6 +1044,49 @@ components:
                 type: string
               description: 項目別エラー。なければ空オブジェクト。
   responses:
+    LoginIdAlreadyExists:
+      description: 'LOGIN_ID_ALREADY_EXISTS: このログインIDは使用されています。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: LOGIN_ID_ALREADY_EXISTS
+              message: このログインIDは使用されています。
+              fields:
+                login_id: 別のIDを入力してください。
+    RegistrationLinkUnavailable:
+      description: 'REGISTRATION_LINK_UNAVAILABLE: この登録URLは利用できません。LINEで「登録」と送信してください。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: REGISTRATION_LINK_UNAVAILABLE
+              message: この登録URLは利用できません。LINEで「登録」と送信してください。
+              fields: {}
+    InvalidLineSignature:
+      description: 'INVALID_LINE_SIGNATURE: LINEの署名を確認できませんでした。'
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INVALID_LINE_SIGNATURE
+              message: LINEの署名を確認できませんでした。
+              fields: {}
     ValidationError:
       description: 'VALIDATION_ERROR: 入力内容を確認してください。'
       headers:
@@ -888,7 +1205,7 @@ components:
               message: ログインしてください。
               fields: {}
     AssetAlreadyExists:
-      description: 'ASSET_ALREADY_EXISTS: この銘柄は登録済みです。'
+      description: 'ASSET_ALREADY_EXISTS: この銘柄は本人に登録済みです。'
       headers:
         Cache-Control:
           $ref: '#/components/headers/NoStore'
@@ -899,7 +1216,7 @@ components:
           example:
             error:
               code: ASSET_ALREADY_EXISTS
-              message: この銘柄は登録済みです。
+              message: この銘柄は本人に登録済みです。
               fields: {}
     SymbolUnavailable:
       description: 'SYMBOL_UNAVAILABLE: このコードの価格を取得できません。'
@@ -944,7 +1261,7 @@ components:
               message: 価格取得がタイムアウトしました。
               fields: {}
     AssetNotFound:
-      description: 'ASSET_NOT_FOUND: 監視対象が見つかりません。'
+      description: 'ASSET_NOT_FOUND: 本人の監視対象が見つかりません。'
       headers:
         Cache-Control:
           $ref: '#/components/headers/NoStore'
@@ -955,7 +1272,7 @@ components:
           example:
             error:
               code: ASSET_NOT_FOUND
-              message: 監視対象が見つかりません。
+              message: 本人の監視対象が見つかりません。
               fields: {}
   headers:
     NoStore:
