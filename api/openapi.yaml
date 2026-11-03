@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: 株・指数の下落通知サービス API
-  version: 1.0.0
-  description: ReactとGoを同一オリジンで提供する単一管理者向けAPI。価格・IDは文字列、日時はUTC。本文書のサンプル価格は仮の値。
+  version: 1.1.0
+  description: ReactとGoを同一オリジンで提供する単一管理者向けAPI。価格・IDは文字列、日時はUTC。下落・回復は毎日07:00 JSTに判定し、複数水準を1通にまとめる。公開APIの項目追加はない。本文書のサンプル価格は仮の値。
 servers:
 - url: /api/v1
   description: 同一オリジンのAPI
@@ -280,7 +280,7 @@ paths:
           $ref: '#/components/responses/PriceProviderTimeout'
         '500':
           $ref: '#/components/responses/InternalError'
-      description: 初期最高値=最終取得値=取得価格、未通知。FMPの整数UNIX秒timestampが取得完了時刻より240時間以上前なら停止中・PRICE_DATA_STALEで201、10日未満なら監視中・エラーなし。timestamp欠落・不正は502。登録時のLINE送信なし。
+      description: 初期最高値=最終取得値=取得価格、最終下落通知率null・内部の回復待ち0件。FMPの整数UNIX秒timestampが取得完了時刻より240時間以上前なら停止中・PRICE_DATA_STALEで201、10日未満なら監視中・エラーなし。timestamp欠落・不正は502。登録時のLINE送信なし。
       parameters:
       - name: Origin
         in: header
@@ -400,7 +400,7 @@ paths:
           $ref: '#/components/responses/ServiceUnavailable'
         '500':
           $ref: '#/components/responses/InternalError'
-      description: 再登録は新しいID・初期最高値・未通知状態で開始。
+      description: 再登録は新しいID・初期最高値・最終下落通知率null・内部の回復待ち0件で開始。
       parameters:
       - name: id
         in: path
@@ -484,7 +484,7 @@ paths:
           $ref: '#/components/responses/ServiceUnavailable'
         '500':
           $ref: '#/components/responses/InternalError'
-      description: 通知済み状態は保持。設定変更時に通知せず、次回の監視実行から適用。
+      description: 最高値・最終下落通知率は保持。削除率の回復待ちは停止中を含め設定と同一トランザクションで取り消す。追加・再追加率は次回の最新価格から判定。保存時は取得・通知せず、実行中の変更は次回から適用。
       parameters:
       - name: Origin
         in: header
@@ -573,8 +573,9 @@ components:
           description: 保存対象価格の取得完了時刻（UTC）。日次処理は鮮度確認通過時だけ更新。警告付き登録では古い価格でも記録。FMPのtimestampではない。
         monitoring_enabled:
           type: boolean
-          description: 日次の価格取得・最高値更新・通知判定を有効にする。falseは日次処理対象外。古い価格での登録と停滞通知成功時はfalse。停滞通知失敗時はtrueを維持。
+          description: 日次の価格取得・最高値更新・下落と回復の通知判定を有効にする。falseは日次処理対象外。古い価格での登録と停滞通知成功時はfalse。停滞通知失敗時はtrueを維持。
         last_notified_threshold:
+          description: 現在の最高値を基準に最後に成功した下落通知の最大率。回復・設定変更では保持、新高値でnull。通知判定に使わず、内部の回復待ちとは異なる。
           type: integer
           minimum: 1
           maximum: 99
@@ -585,7 +586,7 @@ components:
           description: 最後の価格取得試行完了時刻（UTC）。取得失敗・古いデータ検知でも更新。
         last_error_code:
           type: string
-          description: PRICE_DATA_STALEは10日以上前の価格による停止登録・自動停止。NOTIFICATION_FAILEDは下落または停滞通知の失敗。手動再開では保持する。
+          description: PRICE_DATA_STALEは10日以上前の価格による停止登録・自動停止。NOTIFICATION_FAILEDは下落・回復・停滞通知の失敗。手動再開では保持する。
           nullable: true
           enum:
           - PRICE_FETCH_FAILED
@@ -648,7 +649,7 @@ components:
       properties:
         monitoring_enabled:
           type: boolean
-          description: 停止・再開のみ。最高値と通知済み率は保持する。
+          description: 停止・再開のみ。最高値・最終下落通知率・内部の回復待ちと基準最高値を保持し、即時取得・通知しない。
     UpdateNotificationSettings:
       type: object
       additionalProperties: false
@@ -664,7 +665,7 @@ components:
             type: integer
             minimum: 1
             maximum: 99
-          description: 全銘柄共通。入力順は任意、保存・返却時は昇順。
+          description: 全銘柄共通。入力順は任意、保存・返却時は昇順。下落後は対応価格を超えたとき回復通知し、成功後は再下落を通知。削除率は回復待ちも取消。
           example:
           - 10
           - 15
