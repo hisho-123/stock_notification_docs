@@ -1,0 +1,36 @@
+{
+  "date": "2026-11-03",
+  "scope": "仕様・OpenAPI・HTMLの静的検証。製品の通知処理は未実装・未実行。",
+  "openapi": {
+    "version": "3.0.3",
+    "operations": 9,
+    "schemas": 10,
+    "resolved_references": 100,
+    "validated_examples": 34,
+    "wire_contract_unchanged": true,
+    "readme_json": [
+      "Login",
+      "Session",
+      "AssetList",
+      "NotificationSettings",
+      "Error"
+    ],
+    "sample_assets": 6,
+    "sample_settings": 1
+  },
+  "local_markdown_links": 73,
+  "html": [
+    {
+      "file": "asset/assets.html",
+      "unique_ids": 29
+    },
+    {
+      "file": "asset/login.html",
+      "unique_ids": 7
+    },
+    {
+      "file": "asset/settings.html",
+      "unique_ids": 19
+    }
+  ]
+}

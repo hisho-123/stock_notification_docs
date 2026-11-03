@@ -1,0 +1,193 @@
+{
+  "date": "2026-11-03",
+  "scope": "静的HTML見本。価格判定・DB・LINE送信の検証を含まない。",
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "checks": [
+    {
+      "name": "settings 1440 ページの横はみ出しなし",
+      "passed": true
+    },
+    {
+      "name": "settings 1440 回復境界と繰り返し",
+      "passed": true
+    },
+    {
+      "name": "settings 1440 全水準と削除取消",
+      "passed": true
+    },
+    {
+      "name": "settings 1440 normal 表示",
+      "passed": true
+    },
+    {
+      "name": "settings 1440 loading 表示",
+      "passed": true
+    },
+    {
+      "name": "settings 1440 load-error 表示",
+      "passed": true
+    },
+    {
+      "name": "settings 1440 saving 表示",
+      "passed": true
+    },
+    {
+      "name": "settings 1440 save-error 表示",
+      "passed": true
+    },
+    {
+      "name": "settings 1440 saved 表示",
+      "passed": true
+    },
+    {
+      "name": "assets 1440 ページの横はみ出しなし",
+      "passed": true
+    },
+    {
+      "name": "assets 1440 見出しと注記",
+      "passed": true
+    },
+    {
+      "name": "assets 1440 normal 表示",
+      "passed": true
+    },
+    {
+      "name": "assets 1440 loading 表示",
+      "passed": true
+    },
+    {
+      "name": "assets 1440 empty 表示",
+      "passed": true
+    },
+    {
+      "name": "assets 1440 no-results 表示",
+      "passed": true
+    },
+    {
+      "name": "assets 1440 network-error 表示",
+      "passed": true
+    },
+    {
+      "name": "assets 1440 adding 表示",
+      "passed": true
+    },
+    {
+      "name": "最終下落通知率 1440 昇順・null末尾",
+      "passed": true
+    },
+    {
+      "name": "最終下落通知率 1440 降順・null末尾",
+      "passed": true
+    },
+    {
+      "name": "通知率 1440 削除は未保存",
+      "passed": true
+    },
+    {
+      "name": "通知率 1440 編集・保存",
+      "passed": true
+    },
+    {
+      "name": "settings 390 ページの横はみ出しなし",
+      "passed": true
+    },
+    {
+      "name": "settings 390 回復境界と繰り返し",
+      "passed": true
+    },
+    {
+      "name": "settings 390 全水準と削除取消",
+      "passed": true
+    },
+    {
+      "name": "settings 390 normal 表示",
+      "passed": true
+    },
+    {
+      "name": "settings 390 loading 表示",
+      "passed": true
+    },
+    {
+      "name": "settings 390 load-error 表示",
+      "passed": true
+    },
+    {
+      "name": "settings 390 saving 表示",
+      "passed": true
+    },
+    {
+      "name": "settings 390 save-error 表示",
+      "passed": true
+    },
+    {
+      "name": "settings 390 saved 表示",
+      "passed": true
+    },
+    {
+      "name": "assets 390 ページの横はみ出しなし",
+      "passed": true
+    },
+    {
+      "name": "assets 390 見出しと注記",
+      "passed": true
+    },
+    {
+      "name": "一覧テーブルのみ横スクロール",
+      "passed": true
+    },
+    {
+      "name": "assets 390 normal 表示",
+      "passed": true
+    },
+    {
+      "name": "assets 390 loading 表示",
+      "passed": true
+    },
+    {
+      "name": "assets 390 empty 表示",
+      "passed": true
+    },
+    {
+      "name": "assets 390 no-results 表示",
+      "passed": true
+    },
+    {
+      "name": "assets 390 network-error 表示",
+      "passed": true
+    },
+    {
+      "name": "assets 390 adding 表示",
+      "passed": true
+    },
+    {
+      "name": "最終下落通知率 390 昇順・null末尾",
+      "passed": true
+    },
+    {
+      "name": "最終下落通知率 390 降順・null末尾",
+      "passed": true
+    },
+    {
+      "name": "通知率 390 削除は未保存",
+      "passed": true
+    },
+    {
+      "name": "通知率 390 編集・保存",
+      "passed": true
+    },
+    {
+      "name": "JavaScript実行例外なし",
+      "passed": true
+    }
+  ],
+  "errors": []
+}
