@@ -20,7 +20,7 @@
   const compareDecline = (a,b) => { const x=decline(a),y=decline(b),v=x.n*y.d-y.n*x.d; return v < 0n ? -1 : v > 0n ? 1 : 0; };
 
   function loginPage() {
-    const form=$('login-form'), id=$('admin-id'), password=$('password'), submit=$('login-button');
+    const form=$('login-form'), id=$('login-id'), password=$('password'), submit=$('login-button');
     function render() {
       const sending=state.value==='sending', limited=state.value==='limited';
       id.disabled=password.disabled=sending; submit.disabled=sending||limited;
@@ -34,11 +34,54 @@
     state.addEventListener('change',render);
     form.addEventListener('submit',event => {
       event.preventDefault(); if(submit.disabled) return;
-      const badId=!id.value, badPassword=!password.value || new TextEncoder().encode(password.value).length>72;
+      const passwordBytes=new TextEncoder().encode(password.value).length;
+      const badId=!id.value || [...id.value].length>100, badPassword=passwordBytes<8 || passwordBytes>72;
       id.setAttribute('aria-invalid',String(badId));password.setAttribute('aria-invalid',String(badPassword));
-      if(badId||badPassword){show('login-error','IDとパスワードを入力してください。パスワードは72バイト以下です。');(badId?id:password).focus();return;}
+      if(badId||badPassword){show('login-error','IDは1〜100文字、パスワードは8〜72 UTF-8バイトで入力してください。');(badId?id:password).focus();return;}
       if(state.value!=='normal'){password.value='';render();return;}
       state.value='sending';render();setTimeout(()=>location.href='assets.html',350);
+    });render();
+  }
+
+  function registerPage() {
+    const form=$('registration-form'), id=$('login-id'), password=$('password'), submit=$('register-button');
+    let redirectTimer;
+    const unavailable=new Set(['invalid','expired','used','revoked']);
+    function render() {
+      const current=state.value, blocked=unavailable.has(current), done=current==='success';
+      const locked=blocked||['loading','load-error','sending','network-error','limited','success'].includes(current);
+      id.disabled=password.disabled=submit.disabled=locked;
+      form.hidden=blocked||done;
+      submit.textContent=current==='sending'?'登録しています…':'登録してはじめる';
+      $('retry-button').hidden=current!=='load-error';
+      $('registered-assets-link').hidden=!done;
+      show('registration-expires-at',blocked||['loading','load-error','limited','success'].includes(current)?'':`URLの有効期限：${date(new Date(Date.now()+24*60*60*1000).toISOString())} JST（サンプル）`);
+      const errors={
+        'id-conflict':'このログインIDは使用されています。別のIDを入力してください。',
+        'load-error':'登録URLを確認できませんでした。接続を確認して再試行してください。',
+        'network-error':'通信が中断され、登録が完了したか確認できませんでした。',
+        limited:'試行回数が上限に達しました。時間をおいてからURLを開き直してください。'
+      };
+      show('registration-error',blocked?'この登録URLは利用できません。':errors[current]||'');
+      show('registration-status',current==='loading'?'登録URLを確認しています…':current==='sending'?'ユーザーを登録しています…':done?'登録が完了しました。ログイン済みです。':'');
+      show('recovery-note',blocked?'LINEトークで「登録」と送信し、新しいURLを受け取ってください。登録済みの方はログインしてください。':current==='network-error'?'登録が完了している場合は、入力したID・パスワードでログインしてください。未完了の場合はLINEで「登録」と送信してください。':'');
+      id.removeAttribute('aria-invalid');password.removeAttribute('aria-invalid');
+      if(current!=='normal')password.value='';
+      if(current==='id-conflict')id.setAttribute('aria-invalid','true');
+    }
+    state.addEventListener('change',()=>{clearTimeout(redirectTimer);render();});
+    id.addEventListener('input',()=>{if(state.value==='id-conflict'){state.value='normal';render();}});
+    $('retry-button').addEventListener('click',()=>{state.value='normal';render();id.focus();});
+    form.addEventListener('submit',event=>{
+      event.preventDefault();if(submit.disabled)return;
+      const bytes=new TextEncoder().encode(password.value).length;
+      const badId=!id.value||[...id.value].length>100,badPassword=bytes<8||bytes>72;
+      id.setAttribute('aria-invalid',String(badId));password.setAttribute('aria-invalid',String(badPassword));
+      if(badId||badPassword){show('registration-error','ログインIDは1〜100文字、パスワードは8〜72 UTF-8バイトで入力してください。');(badId?id:password).focus();return;}
+      if(state.value==='id-conflict'){password.value='';render();id.focus();return;}
+      // 見本から実際の登録APIを呼ばないよう、完了と遷移だけを模擬する。
+      state.value='sending';render();
+      redirectTimer=setTimeout(()=>{state.value='success';render();history.replaceState(null,'',location.pathname);redirectTimer=setTimeout(()=>location.replace('assets.html'),700);},350);
     });render();
   }
 
@@ -159,5 +202,5 @@
     $('discard-confirm').addEventListener('click',()=>{saved=[...edited];location.href=destination;});
     window.addEventListener('beforeunload',event=>{if(dirty()){event.preventDefault();event.returnValue='';}});render();
   }
-  ({login:loginPage,assets:assetsPage,settings:settingsPage})[document.body.dataset.page]?.();
+  ({login:loginPage,register:registerPage,assets:assetsPage,settings:settingsPage})[document.body.dataset.page]?.();
 })();
