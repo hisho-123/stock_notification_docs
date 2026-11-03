@@ -15,6 +15,7 @@
 | 画面 | [監視対象一覧](ui/assets.md) | 追加、検索、ソート、停止・再開、削除 |
 | 画面 | [通知設定](ui/settings.md) | 共通通知率の変更・保存 |
 | 検証 | [受け入れ条件](design/acceptance.md) / [検証結果](design/verification.md) | 機能・画面・API・障害の確認シナリオと実施結果 |
+| テスト | [実装済みテストケース](design/test-cases.md) | frontend・backendの条件・期待結果とテストコードへの参照 |
 
 ## システム構成
 
